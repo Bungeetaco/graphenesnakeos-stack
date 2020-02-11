@@ -119,12 +119,12 @@ BUILD_REASON=""
 
 # urls
 ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip"
-MANIFEST_URL="https://android.googlesource.com/platform/manifest"
+MANIFEST_URL="https://github.com/GrapheneOS/platform_manifest"
 CHROME_URL_LATEST="https://omahaproxy.appspot.com/all.json"
 STACK_URL_LATEST="https://api.github.com/repos/dan-v/rattlesnakeos-stack/releases/latest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
-KERNEL_SOURCE_URL="https://android.googlesource.com/kernel/msm"
+KERNEL_SOURCE_URL="https://github.com/GrapheneOS/kernel_google_crosshatch"
 AOSP_URL_BUILD="https://developers.google.com/android/images"
 AOSP_URL_BRANCH="https://source.android.com/setup/start/build-numbers"
 
