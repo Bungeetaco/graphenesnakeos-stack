@@ -124,7 +124,7 @@ CHROME_URL_LATEST="https://omahaproxy.appspot.com/all.json"
 STACK_URL_LATEST="https://api.github.com/repos/dan-v/rattlesnakeos-stack/releases/latest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
-KERNEL_SOURCE_URL="https://github.com/GrapheneOS/kernel_google_crosshatch"
+KERNEL_SOURCE_URL="https://github.com/Bungeetaco/Kirisakura_Bluecross"
 AOSP_URL_BUILD="https://developers.google.com/android/images"
 AOSP_URL_BRANCH="https://source.android.com/setup/start/build-numbers"
 
