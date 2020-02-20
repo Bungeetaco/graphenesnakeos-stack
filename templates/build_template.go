@@ -106,9 +106,9 @@ RELEASE_URL="https://${AWS_RELEASE_BUCKET}.s3.amazonaws.com"
 RELEASE_CHANNEL="${DEVICE}-${BUILD_CHANNEL}"
 BUILD_DATE=$(date +%Y.%m.%d.%H)
 BUILD_TIMESTAMP=$(date +%s)
-BUILD_DIR="$HOME/rattlesnake-os"
+BUILD_DIR="$HOME/graphenesnake-os"
 KEYS_DIR="${BUILD_DIR}/keys"
-CERTIFICATE_SUBJECT='/CN=RattlesnakeOS'
+CERTIFICATE_SUBJECT='/CN=GrapheneSnakeOS'
 OFFICIAL_FDROID_KEY="43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
 KERNEL_SOURCE_DIR="${HOME}/kernel/google/${DEVICE_FAMILY}"
 BUILD_REASON=""
@@ -116,7 +116,6 @@ BUILD_REASON=""
 # urls
 ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip"
 MANIFEST_URL="https://github.com/GrapheneOS/platform_manifest"
-STACK_URL_LATEST="https://api.github.com/repos/dan-v/rattlesnakeos-stack/releases/latest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
 KERNEL_SOURCE_URL="https://github.com/GrapheneOS/kernel_google_${DEVICE_FAMILY}"
@@ -131,17 +130,6 @@ get_latest_versions() {
   log_header ${FUNCNAME}
 
   sudo DEBIAN_FRONTEND=noninteractive apt-get -y install jq
-
-  # check if running latest stack
-  LATEST_STACK_VERSION=$(curl --fail -s "$STACK_URL_LATEST" | jq -r '.name')
-  if [ -z "$LATEST_STACK_VERSION" ]; then
-    aws_notify_simple "ERROR: Unable to get latest rattlesnakeos-stack version details. Stopping build."
-    exit 1
-  elif [ "$LATEST_STACK_VERSION" == "$STACK_VERSION" ]; then
-    echo "Running the latest rattlesnakeos-stack version $LATEST_STACK_VERSION"
-  else
-    STACK_UPDATE_MESSAGE="WARNING: you should upgrade to the latest version: ${LATEST_STACK_VERSION}"
-  fi
 
   # fdroid - get latest non alpha tags from gitlab (sorted)
   # TODO: exclude alpha once 1.8 stable is released
@@ -180,7 +168,7 @@ check_for_new_versions() {
   needs_update=false
 
   # check stack version
-  existing_stack_version=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/rattlesnakeos-stack/revision" - || true)
+  existing_stack_version=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/graphenesnakeos-stack/revision" - || true)
   if [ "$existing_stack_version" == "$STACK_VERSION" ]; then
     echo "Stack version ($existing_stack_version) is up to date"
   else
@@ -231,7 +219,7 @@ check_for_new_versions() {
       echo "$message"
       BUILD_REASON="$message"
     else
-      aws_notify "RattlesnakeOS build not required as all components are already up to date."
+      aws_notify "GrapheneSnakeOS build not required as all components are already up to date."
       exit 0
     fi
   fi
@@ -247,7 +235,7 @@ full_run() {
   get_latest_versions
   check_for_new_versions
   initial_key_setup
-  aws_notify "RattlesnakeOS Build STARTED"
+  aws_notify "GrapheneSnakeOS Build STARTED"
   setup_env
   aosp_repo_init
   aosp_repo_modifications
@@ -265,7 +253,7 @@ full_run() {
   release "${DEVICE}"
   aws_upload
   checkpoint_versions
-  aws_notify "RattlesnakeOS Build SUCCESS"
+  aws_notify "GrapheneSnakeOS Build SUCCESS"
 }
 
 build_fdroid() {
@@ -314,7 +302,7 @@ attestation_setup() {
 
   cd $HOME
   echo "cloning and building auditor"
-  git clone https://github.com/RattlesnakeOS/Auditor.git
+  git clone https://github.com/GrapheneOS/Auditor.git
   cd Auditor
   sed -i "s/DOMAIN_NAME/${ATTESTATION_DOMAIN}/g" app/src/main/res/values/strings.xml
   sed -i "s/attestation.app/${ATTESTATION_DOMAIN}/" app/src/main/java/app/attestation/auditor/RemoteVerifyJob.java
@@ -336,7 +324,7 @@ attestation_setup() {
 
   cd $HOME
   echo "cloning attestationserver"
-  git clone https://github.com/RattlesnakeOS/AttestationServer.git
+  git clone https://github.com/GrapheneOS/AttestationServer.git
   cd AttestationServer
   cat <<EOF > .ebextensions/.config
 option_settings:
@@ -514,7 +502,7 @@ aosp_repo_init() {
   log_header ${FUNCNAME}
   cd "${BUILD_DIR}"
 
-  repo init --manifest-url "$MANIFEST_URL" --manifest-branch "$AOSP_BRANCH" --depth 1 || true
+  repo init -u "$MANIFEST_URL" -b refs/tags/ || true
 }
 
 aosp_repo_modifications() {
@@ -522,7 +510,7 @@ aosp_repo_modifications() {
   cd "${BUILD_DIR}"
 
   # make modifications to default AOSP
-  if ! grep -q "RattlesnakeOS" .repo/manifest.xml; then
+  if ! grep -q "GrapheneOS" .repo/manifest.xml; then
     # really ugly awk script to add additional repos to manifest
     awk -i inplace \
       -v ANDROID_VERSION="$ANDROID_VERSION" \
@@ -530,7 +518,6 @@ aosp_repo_modifications() {
       -v FDROID_PRIV_EXT_VERSION="$FDROID_PRIV_EXT_VERSION" \
       '1;/<repo-hooks in-project=/{
       print "  ";
-      print "  <remote name=\"github\" fetch=\"https://github.com/RattlesnakeOS/\" revision=\"" ANDROID_VERSION "\" />";
       print "  <remote name=\"fdroid\" fetch=\"https://gitlab.com/fdroid/\" />";
       <% if .CustomManifestRemotes %>
       <% range $i, $r := .CustomManifestRemotes %>
@@ -980,7 +967,7 @@ checkpoint_versions() {
   log_header ${FUNCNAME}
 
   # checkpoint stack version
-  echo "${STACK_VERSION}" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/rattlesnakeos-stack/revision"
+  echo "${STACK_VERSION}" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/graphenesnakeos-stack/revision"
 
   # checkpoint f-droid
   echo "${FDROID_PRIV_EXT_VERSION}" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/fdroid-priv/revision"
@@ -1103,7 +1090,7 @@ cleanup() {
   rv=$?
   aws_logging
   if [ $rv -ne 0 ]; then
-    aws_notify "RattlesnakeOS Build FAILED" 1
+    aws_notify "GrapheneSnakeOS Build FAILED" 1
   fi
   if [ "${PREVENT_SHUTDOWN}" = true ]; then
     log "Skipping shutdown"
