@@ -314,7 +314,7 @@ attestation_setup() {
 
   cd $HOME
   echo "cloning attestationserver"
-  git clone https://github.com/GrapheneOS/AttestationServer.git
+  git clone https://github.com/RattlesnakeOS/AttestationServer.git
   cd AttestationServer
   cat <<EOF > .ebextensions/.config
 option_settings:
@@ -506,7 +506,7 @@ aosp_repo_modifications() {
   cd "${BUILD_DIR}"
 
   # make modifications to default AOSP
-  if ! grep -q "GrapheneOS" .repo/manifest.xml; then
+  if ! grep -q "GrapheneSnakeOS" .repo/manifest.xml; then
     # really ugly awk script to add additional repos to manifest
     awk -i inplace \
       -v ANDROID_VERSION="$ANDROID_VERSION" \
