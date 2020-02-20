@@ -67,9 +67,6 @@ PREVENT_SHUTDOWN=<% .PreventShutdown %>
 # whether version checks should be ignored
 IGNORE_VERSION_CHECKS=<% .IgnoreVersionChecks %>
 
-# version of chromium to pin to if requested
-CHROMIUM_PINNED_VERSION=<% .ChromiumVersion %>
-
 # whether keys are client side encrypted or not
 ENCRYPTED_KEYS="<% .EncryptedKeys %>"
 ENCRYPTION_KEY=
@@ -107,7 +104,6 @@ SECONDS=0
 BUILD_TARGET="release aosp_${DEVICE} ${BUILD_TYPE}"
 RELEASE_URL="https://${AWS_RELEASE_BUCKET}.s3.amazonaws.com"
 RELEASE_CHANNEL="${DEVICE}-${BUILD_CHANNEL}"
-CHROME_CHANNEL="stable"
 BUILD_DATE=$(date +%Y.%m.%d.%H)
 BUILD_TIMESTAMP=$(date +%s)
 BUILD_DIR="$HOME/rattlesnake-os"
@@ -120,7 +116,6 @@ BUILD_REASON=""
 # urls
 ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip"
 MANIFEST_URL="https://github.com/GrapheneOS/platform_manifest"
-CHROME_URL_LATEST="https://omahaproxy.appspot.com/all.json"
 STACK_URL_LATEST="https://api.github.com/repos/dan-v/rattlesnakeos-stack/releases/latest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
@@ -130,7 +125,6 @@ AOSP_URL_BRANCH="https://source.android.com/setup/start/build-numbers"
 
 STACK_UPDATE_MESSAGE=
 LATEST_STACK_VERSION=
-LATEST_CHROMIUM=
 FDROID_CLIENT_VERSION=
 FDROID_PRIV_EXT_VERSION=
 get_latest_versions() {
@@ -147,13 +141,6 @@ get_latest_versions() {
     echo "Running the latest rattlesnakeos-stack version $LATEST_STACK_VERSION"
   else
     STACK_UPDATE_MESSAGE="WARNING: you should upgrade to the latest version: ${LATEST_STACK_VERSION}"
-  fi
-
-   check for latest stable chromium version
-  LATEST_CHROMIUM=$(curl --fail -s "$CHROME_URL_LATEST" | jq -r '.[] | select(.os == "android") | .versions[] | select(.channel == "'$CHROME_CHANNEL'") | .current_version')
-  if [ -z "$LATEST_CHROMIUM" ]; then
-    aws_notify_simple "ERROR: Unable to get latest Chromium version details. Stopping build."
-    exit 1
   fi
 
   # fdroid - get latest non alpha tags from gitlab (sorted)
@@ -212,26 +199,6 @@ check_for_new_versions() {
     BUILD_REASON="$BUILD_REASON 'AOSP build $existing_aosp_build != $AOSP_BUILD'"
   fi
 
-  # check chromium
-  if [ ! -z "$CHROMIUM_PINNED_VERSION" ]; then
-    log "Setting LATEST_CHROMIUM to pinned version $CHROMIUM_PINNED_VERSION"
-    LATEST_CHROMIUM="$CHROMIUM_PINNED_VERSION"
-  fi
-  existing_chromium=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/chromium/revision" - || true)
-  chromium_included=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/chromium/included" - || true)
-  if [ "$existing_chromium" == "$LATEST_CHROMIUM" ] && [ "$chromium_included" == "yes" ]; then
-    echo "Chromium build ($existing_chromium) is up to date"
-  else
-    echo "Chromium needs to be updated to ${LATEST_CHROMIUM}"
-    echo "no" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/chromium/included"
-    needs_update=true
-    if [ "$existing_chromium" == "$LATEST_CHROMIUM" ]; then
-      BUILD_REASON="$BUILD_REASON 'Chromium version $existing_chromium built but not installed'"
-    else
-      BUILD_REASON="$BUILD_REASON 'Chromium version $existing_chromium != $LATEST_CHROMIUM'"
-    fi
-  fi
-
   # check fdroid
   existing_fdroid_client=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/fdroid/revision" - || true)
   if [ "$existing_fdroid_client" == "$FDROID_CLIENT_VERSION" ]; then
@@ -282,7 +249,6 @@ full_run() {
   initial_key_setup
   aws_notify "RattlesnakeOS Build STARTED"
   setup_env
-  check_chromium
   aosp_repo_init
   aosp_repo_modifications
   aosp_repo_sync
@@ -295,22 +261,11 @@ full_run() {
   apply_patches
   # Rebuild kernel using GrapheneOS build script
   rebuild_kernel
-  add_chromium
   build_aosp
   release "${DEVICE}"
   aws_upload
   checkpoint_versions
   aws_notify "RattlesnakeOS Build SUCCESS"
-}
-
-add_chromium() {
-  log_header ${FUNCNAME}
-
-  # replace AOSP webview with latest built chromium webview
-  aws s3 cp "s3://${AWS_RELEASE_BUCKET}/chromium/SystemWebView.apk" ${BUILD_DIR}/external/chromium-webview/prebuilt/arm64/webview.apk
-
-  # add latest built chromium browser to external/chromium
-  aws s3 cp "s3://${AWS_RELEASE_BUCKET}/chromium/ChromeModernPublic.apk" ${BUILD_DIR}/external/chromium/prebuilt/arm64/
 }
 
 build_fdroid() {
@@ -555,89 +510,6 @@ setup_env() {
   git config --global color.ui true
 }
 
-check_chromium() {
-  log_header ${FUNCNAME}
-
-  current=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/chromium/revision" - || true)
-  log "Chromium current: $current"
-
-  log "Chromium latest: $LATEST_CHROMIUM"
-  if [ "$LATEST_CHROMIUM" == "$current" ]; then
-    log "Chromium latest ($LATEST_CHROMIUM) matches current ($current)"
-  else
-    log "Building chromium $LATEST_CHROMIUM"
-    build_chromium $LATEST_CHROMIUM
-  fi
-  rm -rf $HOME/chromium
-}
-
-build_chromium() {
-  log_header ${FUNCNAME}
-
-  CHROMIUM_REVISION=$1
-  DEFAULT_VERSION=$(echo $CHROMIUM_REVISION | awk -F"." '{ printf "%s%03d52\n",$3,$4}')
-
-  # depot tools setup
-  if [ ! -d "$HOME/depot_tools" ]; then
-    retry git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-  fi
-  export PATH="$PATH:$HOME/depot_tools"
-
-  # fetch chromium
-  mkdir -p $HOME/chromium
-  cd $HOME/chromium
-  fetch --nohooks android
-  cd src
-
-  # checkout specific revision
-  git checkout "$CHROMIUM_REVISION" -f
-
-  # install dependencies
-  echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
-  log "Installing chromium build dependencies"
-  sudo ./build/install-build-deps-android.sh
-
-  # run gclient sync (runhooks will run as part of this)
-  log "Running gclient sync (this takes a while)"
-  for i in {1..5}; do
-    yes | gclient sync --with_branch_heads --jobs 32 -RDf && break
-  done
-
-  # cleanup any files in tree not part of this revision
-  git clean -dff
-
-  # reset any modifications
-  git checkout -- .
-
-  # generate configuration
-  mkdir -p out/Default
-  cat <<EOF > out/Default/args.gn
-target_os = "android"
-target_cpu = "arm64"
-is_debug = false
-is_official_build = true
-is_component_build = false
-symbol_level = 1
-ffmpeg_branding = "Chrome"
-proprietary_codecs = true
-android_channel = "stable"
-android_default_version_name = "$CHROMIUM_REVISION"
-android_default_version_code = "$DEFAULT_VERSION"
-EOF
-  gn gen out/Default
-
-  log "Building chromium chrome_modern_public_apk target"
-  autoninja -C out/Default/ chrome_modern_public_apk
-
-  log "Building chromium system_webview_apk target"
-  autoninja -C out/Default/ system_webview_apk
-  
-  # upload to s3 for future builds
-  aws s3 cp "out/Default/apks/SystemWebView.apk" "s3://${AWS_RELEASE_BUCKET}/chromium/SystemWebView.apk"
-  aws s3 cp "out/Default/apks/ChromeModernPublic.apk" "s3://${AWS_RELEASE_BUCKET}/chromium/ChromeModernPublic.apk"
-  echo "${CHROMIUM_REVISION}" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/chromium/revision"
-}
-
 aosp_repo_init() {
   log_header ${FUNCNAME}
   cd "${BUILD_DIR}"
@@ -673,7 +545,6 @@ aosp_repo_modifications() {
       <% if .EnableAttestation %>
       print "  <project path=\"external/Auditor\" name=\"platform_external_Auditor\" remote=\"github\" />";
       <% end %>
-      print "  <project path=\"external/chromium\" name=\"platform_external_chromium\" remote=\"github\" />";
       print "  <project path=\"packages/apps/Updater\" name=\"platform_packages_apps_Updater\" remote=\"github\" />";
       print "  <project path=\"packages/apps/F-Droid\" name=\"platform_external_fdroid\" remote=\"github\" />";
       print "  <project path=\"packages/apps/F-DroidPrivilegedExtension\" name=\"privileged-extension\" remote=\"fdroid\" revision=\"refs/tags/" FDROID_PRIV_EXT_VERSION "\" />";
@@ -891,7 +762,6 @@ patch_add_apps() {
   sed -i "\$aPRODUCT_PACKAGES += Updater" ${mk_file}
   sed -i "\$aPRODUCT_PACKAGES += F-DroidPrivilegedExtension" ${mk_file}
   sed -i "\$aPRODUCT_PACKAGES += F-Droid" ${mk_file}
-  sed -i "\$aPRODUCT_PACKAGES += chromium" ${mk_file}
   if [ "${ENABLE_ATTESTATION}" == "true" ]; then
     sed -i "\$aPRODUCT_PACKAGES += Auditor" ${mk_file}
   fi
@@ -1124,8 +994,6 @@ checkpoint_versions() {
   # checkpoint aosp
   aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/${DEVICE}-vendor" --acl public-read <<< "${AOSP_BUILD}" || true
   
-  # checkpoint chromium
-  echo "yes" | aws s3 cp - "s3://${AWS_RELEASE_BUCKET}/chromium/included"
 }
 
 aws_notify_simple() {
@@ -1143,8 +1011,8 @@ aws_notify() {
   fi
   ELAPSED="$(($SECONDS / 3600))hrs $((($SECONDS / 60) % 60))min $(($SECONDS % 60))sec"
   aws sns publish --region ${REGION} --topic-arn "$AWS_SNS_ARN" \
-    --message="$(printf "$1\n  Device: %s\n  Stack Name: %s\n  Stack Version: %s %s\n  Stack Region: %s\n  Release Channel: %s\n  Instance Type: %s\n  Instance Region: %s\n  Instance IP: %s\n  Build Date: %s\n  Elapsed Time: %s\n  AOSP Build: %s\n  AOSP Branch: %s\n  Chromium Version: %s\n  F-Droid Version: %s\n  F-Droid Priv Extension Version: %s\n  Build Reason: %s\n%s" \
-      "${DEVICE}" "${STACK_NAME}" "${STACK_VERSION}" "${STACK_UPDATE_MESSAGE}" "${REGION}" "${RELEASE_CHANNEL}" "${INSTANCE_TYPE}" "${INSTANCE_REGION}" "${INSTANCE_IP}" "${BUILD_DATE}" "${ELAPSED}" "${AOSP_BUILD}" "${AOSP_BRANCH}" "${LATEST_CHROMIUM}" "${FDROID_CLIENT_VERSION}" "${FDROID_PRIV_EXT_VERSION}" "${BUILD_REASON}" "${LOGOUTPUT}")" || true
+    --message="$(printf "$1\n  Device: %s\n  Stack Name: %s\n  Stack Version: %s %s\n  Stack Region: %s\n  Release Channel: %s\n  Instance Type: %s\n  Instance Region: %s\n  Instance IP: %s\n  Build Date: %s\n  Elapsed Time: %s\n  AOSP Build: %s\n  AOSP Branch: %s\n  F-Droid Version: %s\n  F-Droid Priv Extension Version: %s\n  Build Reason: %s\n%s" \
+      "${DEVICE}" "${STACK_NAME}" "${STACK_VERSION}" "${STACK_UPDATE_MESSAGE}" "${REGION}" "${RELEASE_CHANNEL}" "${INSTANCE_TYPE}" "${INSTANCE_REGION}" "${INSTANCE_IP}" "${BUILD_DATE}" "${ELAPSED}" "${AOSP_BUILD}" "${AOSP_BRANCH}" "${FDROID_CLIENT_VERSION}" "${FDROID_PRIV_EXT_VERSION}" "${BUILD_REASON}" "${LOGOUTPUT}")" || true
 }
 
 aws_logging() {
