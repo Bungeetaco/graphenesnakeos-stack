@@ -494,6 +494,11 @@ aosp_repo_init() {
 
   LATEST_TAG=$(git ls-remote --tags $MANIFEST_URL | grep -o 'refs/tags/QQ1A.[0-9]*\.[0-9]*\.[0-9]*' | sort -r | head -n 1 | grep -o '[^\/]*$')
   repo init -u "$MANIFEST_URL" -b refs/tags/$LATEST_TAG || true
+  gpg --recv-keys 65EEFE022108E2B708CBFCF7F9E712E59AF5F22A
+  gpg --recv-keys 4340D13570EF945E83810964E8AD3F819AB10E78
+  cd .repo/manifests
+  git verify-tag --raw $(git describe)
+  cd ../..
 }
 
 aosp_repo_modifications() {
@@ -546,6 +551,7 @@ aosp_repo_sync() {
   for i in {1..10}; do
     repo sync -c --no-tags --no-clone-bundle --jobs 32 && break
   done
+  repo forall -c 'git verify-tag --raw $(git describe)' || echo Verification failed!
 }
 
 setup_vendor() {
