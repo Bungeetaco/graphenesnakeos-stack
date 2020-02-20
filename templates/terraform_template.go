@@ -65,7 +65,7 @@ provider "aws" {
 ###################
 # IAM
 ###################
-resource "aws_iam_role" "rattlesnake_ec2_role" {
+resource "aws_iam_role" "graphenesnake_ec2_role" {
     name = "${var.name}-ec2"
     assume_role_policy = <<EOF
 {
@@ -84,9 +84,9 @@ resource "aws_iam_role" "rattlesnake_ec2_role" {
 EOF
 }
   
-resource "aws_iam_role_policy" "rattlesnake_ec2_policy" {
+resource "aws_iam_role_policy" "graphenesnake_ec2_policy" {
     name = "${var.name}-ec2-policy"
-    role = "${aws_iam_instance_profile.rattlesnake_ec2_role.id}"
+    role = "${aws_iam_instance_profile.graphenesnake_ec2_role.id}"
     policy = <<EOF
 {
 "Version": "2012-10-17",
@@ -238,12 +238,12 @@ resource "aws_iam_role_policy" "rattlesnake_ec2_policy" {
 EOF
 }
 
-resource "aws_iam_instance_profile" "rattlesnake_ec2_role" {
+resource "aws_iam_instance_profile" "graphenesnake_ec2_role" {
     name = "${var.name}-ec2"
-    role = "${aws_iam_role.rattlesnake_ec2_role.name}"
+    role = "${aws_iam_role.graphenesnake_ec2_role.name}"
 }
 
-resource "aws_iam_role" "rattlesnake_lambda_role" {
+resource "aws_iam_role" "graphenesnake_lambda_role" {
   name = "${var.name}-lambda"
   assume_role_policy = <<EOF
 {
@@ -262,9 +262,9 @@ resource "aws_iam_role" "rattlesnake_lambda_role" {
 EOF
 }
 
-resource "aws_iam_role_policy" "rattlesnake_lambda_policy" {
+resource "aws_iam_role_policy" "graphenesnake_lambda_policy" {
     name = "${var.name}-lambda-policy"
-    role = "${aws_iam_role.rattlesnake_lambda_role.id}"
+    role = "${aws_iam_role.graphenesnake_lambda_role.id}"
     policy = <<EOF
 {
 "Version": "2012-10-17",
@@ -291,7 +291,7 @@ EOF
 ###################
 # S3
 ###################
-resource "aws_s3_bucket" "rattlesnake_s3_keys" {
+resource "aws_s3_bucket" "graphenesnake_s3_keys" {
     bucket = "${var.name}-keys"
     force_destroy = true
   acl    = "private"
@@ -304,7 +304,7 @@ resource "aws_s3_bucket" "rattlesnake_s3_keys" {
     }
   }
 }
-resource "aws_s3_bucket" "rattlesnake_s3_keys_enc" {
+resource "aws_s3_bucket" "graphenesnake_s3_keys_enc" {
     bucket = "${var.name}-keys-encrypted"
     force_destroy = true
   acl    = "private"
@@ -317,7 +317,7 @@ resource "aws_s3_bucket" "rattlesnake_s3_keys_enc" {
     }
   }
 }
-resource "aws_s3_bucket" "rattlesnake_s3_logs" {
+resource "aws_s3_bucket" "graphenesnake_s3_logs" {
     bucket = "${var.name}-logs"
     force_destroy = true
   acl    = "private"
@@ -330,7 +330,7 @@ resource "aws_s3_bucket" "rattlesnake_s3_logs" {
     }
   }
 }
-resource "aws_s3_bucket" "rattlesnake_s3_release" {
+resource "aws_s3_bucket" "graphenesnake_s3_release" {
     bucket = "${var.name}-release"
     force_destroy = true
   acl    = "private"
@@ -343,7 +343,7 @@ resource "aws_s3_bucket" "rattlesnake_s3_release" {
     }
   }
 }
-resource "aws_s3_bucket" "rattlesnake_s3_script" {
+resource "aws_s3_bucket" "graphenesnake_s3_script" {
     bucket = "${var.name}-script"
     force_destroy = true
   acl    = "private"
@@ -357,29 +357,29 @@ resource "aws_s3_bucket" "rattlesnake_s3_script" {
   }
 }
 
-resource "aws_s3_bucket_object" "rattlesnake_s3_script_file" {
+resource "aws_s3_bucket_object" "graphenesnake_s3_script_file" {
   bucket = "${var.name}-script"
   key    = "build.sh"
   source = "${var.shell_script_file}"
   etag   = "${md5(file("${var.shell_script_file}"))}"
 
-  depends_on = ["aws_s3_bucket.rattlesnake_s3_script"]
+  depends_on = ["aws_s3_bucket.graphenesnake_s3_script"]
 }
 
 ###################
 # SNS
 ###################
-resource "aws_sns_topic" "rattlesnake" {
+resource "aws_sns_topic" "graphenesnake" {
   name = "${var.name}"
 }
 
 ###################
 # Lambda
 ###################
-resource "aws_lambda_function" "rattlesnake_lambda_build" {
+resource "aws_lambda_function" "graphenesnake_lambda_build" {
     filename         = "${var.lambda_build_zip_file}"
     function_name    = "${var.name}-build"
-    role             = "${aws_iam_role.rattlesnake_lambda_role.arn}"
+    role             = "${aws_iam_role.graphenesnake_lambda_role.arn}"
     handler          = "lambda_spot_function.lambda_handler"
     source_code_hash = "${base64sha256(file("${var.lambda_build_zip_file}"))}"
     runtime          = "python3.6"
@@ -391,20 +391,20 @@ resource "aws_lambda_function" "rattlesnake_lambda_build" {
 ###################
 resource "aws_cloudwatch_event_rule" "build_schedule" {
     name = "${var.name}-build-schedule"
-    description = "RattlesnakeOS build"
+    description = "GrapheneSnakeOS build"
     schedule_expression = "<% .Config.Schedule %>"
 }
 
 resource "aws_cloudwatch_event_target" "check_build_schedule" {
     rule = "${aws_cloudwatch_event_rule.build_schedule.name}"
     target_id = "${var.name}-build"
-    arn = "${aws_lambda_function.rattlesnake_lambda_build.arn}"
+    arn = "${aws_lambda_function.graphenesnake_lambda_build.arn}"
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch_to_call_build_schedule" {
     statement_id = "AllowExecutionFromCloudWatch"
     action = "lambda:InvokeFunction"
-    function_name = "${aws_lambda_function.rattlesnake_lambda_build.function_name}"
+    function_name = "${aws_lambda_function.graphenesnake_lambda_build.function_name}"
     principal = "events.amazonaws.com"
     source_arn = "${aws_cloudwatch_event_rule.build_schedule.arn}"
 }
@@ -492,7 +492,7 @@ resource "aws_security_group" "beanstalk" {
     }
 }
 
-resource "aws_s3_bucket" "rattlesnake_s3_attestation" {
+resource "aws_s3_bucket" "graphenesnake_s3_attestation" {
     bucket = "${var.name}-attestation"
     force_destroy = true
     acl    = "private"
@@ -511,7 +511,7 @@ data "aws_elastic_beanstalk_solution_stack" "docker" {
     most_recent         = true
 }
 
-resource "aws_iam_role" "rattlesnake_beanstalk_ec2_role" {
+resource "aws_iam_role" "graphenesnake_beanstalk_ec2_role" {
     name = "${var.name}-beanstalk-ec2"
     assume_role_policy = <<EOF
 {
@@ -530,9 +530,9 @@ resource "aws_iam_role" "rattlesnake_beanstalk_ec2_role" {
 EOF
 }
 
-resource "aws_iam_role_policy" "rattlesnake_beanstalk_ec2_policy" {
+resource "aws_iam_role_policy" "graphenesnake_beanstalk_ec2_policy" {
     name = "${var.name}-beanstalk-ec2-policy"
-    role = "${aws_iam_instance_profile.rattlesnake_beanstalk_ec2_role.id}"
+    role = "${aws_iam_instance_profile.graphenesnake_beanstalk_ec2_role.id}"
     policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -591,9 +591,9 @@ resource "aws_iam_role_policy" "rattlesnake_beanstalk_ec2_policy" {
 EOF
 }
 
-resource "aws_iam_instance_profile" "rattlesnake_beanstalk_ec2_role" {
+resource "aws_iam_instance_profile" "graphenesnake_beanstalk_ec2_role" {
     name = "${var.name}-beanstalk-ec2"
-    role = "${aws_iam_role.rattlesnake_beanstalk_ec2_role.name}"
+    role = "${aws_iam_role.graphenesnake_beanstalk_ec2_role.name}"
 }
 
 resource "aws_elastic_beanstalk_application" "attestation" {
@@ -651,13 +651,13 @@ resource "aws_elastic_beanstalk_environment" "attestation" {
     setting {
         namespace  = "aws:autoscaling:launchconfiguration"
         name       = "IamInstanceProfile"
-        value      = "${aws_iam_role.rattlesnake_beanstalk_ec2_role.name}"
+        value      = "${aws_iam_role.graphenesnake_beanstalk_ec2_role.name}"
     }
 
     setting {
         namespace = "aws:elasticbeanstalk:sns:topics"
         name      = "Notification Topic ARN"
-        value     = "${aws_sns_topic.rattlesnake.arn}"
+        value     = "${aws_sns_topic.graphenesnake.arn}"
     }
 
     setting {
@@ -673,6 +673,6 @@ resource "aws_elastic_beanstalk_environment" "attestation" {
 ###################
 output "sns_topic_arn" {
     description = "The SNS ARN"
-    value = "${aws_sns_topic.rattlesnake.arn}"
+    value = "${aws_sns_topic.graphenesnake.arn}"
 }
 `
