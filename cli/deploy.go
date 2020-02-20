@@ -129,7 +129,7 @@ func init() {
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Deploy or update the AWS infrastructure used for building RattlesnakeOS",
+	Short: "Deploy or update the AWS infrastructure used for building GrapheneSnakeOS",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if viper.GetString("name") == "" {
 			return fmt.Errorf("must provide a stack name")
