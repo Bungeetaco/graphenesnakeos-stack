@@ -492,7 +492,7 @@ aosp_repo_init() {
   log_header ${FUNCNAME}
   cd "${BUILD_DIR}"
 
-  LATEST_TAG=$(git ls-remote --tags $MANIFEST_URL | grep -o 'refs/tags/QQ1A.[0-9]*\.[0-9]*\.[0-9]*' | sort -r | head -n 1 | grep -o '[^\/]*$')
+  LATEST_TAG=$(git ls-remote --tags $MANIFEST_URL | grep -o 'refs/tags/QQ1A.[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*' | sort -r | head -n 1 | grep -o '[^\/]*$')
   repo init -u "$MANIFEST_URL" -b refs/tags/$LATEST_TAG || true
   gpg --recv-keys 65EEFE022108E2B708CBFCF7F9E712E59AF5F22A
   gpg --recv-keys 4340D13570EF945E83810964E8AD3F819AB10E78
