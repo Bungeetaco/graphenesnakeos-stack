@@ -1,9 +1,9 @@
-module github.com/dan-v/rattlesnakeos-stack
+module github.com/Bungeetaco/graphenesnakeos-stack
 
 go 1.12
 
 require (
-	github.com/Bungeetaco/graphenesnakeos-stack v9.0.31+incompatible
+	github.com/Bungeetaco/graphenesnakeos-stack 10.0
 	github.com/BurntSushi/toml v0.3.1
 	github.com/aws/aws-sdk-go v1.21.8
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
