@@ -514,7 +514,7 @@ aosp_repo_modifications() {
       -v FDROID_PRIV_EXT_VERSION="$FDROID_PRIV_EXT_VERSION" \
       '1;/<repo-hooks in-project=/{
       print "  ";
-      print "  <remote name=\"github\" fetch=\"https://github.com/GrapheneOS/\" revision=\"" ANDROID_VERSION "\" />";
+      print "  <remote name=\"ros\" fetch=\"https://github.com/RattlesnakeOS/\" revision=\"" ANDROID_VERSION "\" />";
       print "  <remote name=\"fdroid\" fetch=\"https://gitlab.com/fdroid/\" />";
       <% if .CustomManifestRemotes %>
       <% range $i, $r := .CustomManifestRemotes %>
@@ -526,13 +526,9 @@ aosp_repo_modifications() {
       print "  <project path=\"<% .Path %>\" name=\"<% .Name %>\" remote=\"<% .Remote %>\" />";
       <% end %>
       <% end %>
-      <% if .EnableAttestation %>
-      print "  <project path=\"external/Auditor\" name=\"platform_external_Auditor\" remote=\"github\" />";
-      <% end %>
-      print "  <project path=\"packages/apps/Updater\" name=\"platform_packages_apps_Updater\" remote=\"github\" />";
-      print "  <project path=\"packages/apps/F-Droid\" name=\"platform_external_fdroid\" remote=\"github\" />";
+      print "  <project path=\"packages/apps/F-Droid\" name=\"platform_external_fdroid\" remote=\"ros\" />";
       print "  <project path=\"packages/apps/F-DroidPrivilegedExtension\" name=\"privileged-extension\" remote=\"fdroid\" revision=\"refs/tags/" FDROID_PRIV_EXT_VERSION "\" />";
-      print "  <project path=\"vendor/android-prepare-vendor\" name=\"android-prepare-vendor\" remote=\"github\" />"}' .repo/manifest.xml
+      print "  <project path=\"vendor/android-prepare-vendor\" name=\"android-prepare-vendor\" remote=\"ros\" />"}' .repo/manifest.xml
 
     # remove things from manifest
     sed -i '/packages\/apps\/Browser2/d' .repo/manifest.xml
