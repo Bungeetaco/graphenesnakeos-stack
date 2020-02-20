@@ -115,7 +115,7 @@ BUILD_REASON=""
 
 # urls
 ANDROID_SDK_URL="https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip"
-MANIFEST_URL="https://github.com/GrapheneOS/platform_manifest.git"
+MANIFEST_URL="https://github.com/GrapheneOS/platform_manifest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
 KERNEL_SOURCE_URL="https://github.com/GrapheneOS/kernel_google_${DEVICE_FAMILY}"
@@ -492,7 +492,7 @@ aosp_repo_init() {
   log_header ${FUNCNAME}
   cd "${BUILD_DIR}"
 
-  LATEST_TAG=$(git ls-remote --tags https://github.com/GrapheneOS/platform_manifest | grep -o 'refs/tags/QQ1A.[0-9]*\.[0-9]*\.[0-9]*' | sort -r | head -n 1 | grep -o '[^\/]*$')
+  LATEST_TAG=$(git ls-remote --tags $MANIFEST_URL | grep -o 'refs/tags/QQ1A.[0-9]*\.[0-9]*\.[0-9]*' | sort -r | head -n 1 | grep -o '[^\/]*$')
   repo init -u "$MANIFEST_URL" -b refs/tags/$LATEST_TAG || true
 }
 
