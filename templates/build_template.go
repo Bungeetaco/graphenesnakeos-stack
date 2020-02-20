@@ -508,6 +508,7 @@ aosp_repo_modifications() {
       -v FDROID_PRIV_EXT_VERSION="$FDROID_PRIV_EXT_VERSION" \
       '1;/<repo-hooks in-project=/{
       print "  ";
+      print "  <remote name=\"github\" fetch=\"https://github.com/GrapheneOS/\" revision=\"" ANDROID_VERSION "\" />";
       print "  <remote name=\"fdroid\" fetch=\"https://gitlab.com/fdroid/\" />";
       <% if .CustomManifestRemotes %>
       <% range $i, $r := .CustomManifestRemotes %>
