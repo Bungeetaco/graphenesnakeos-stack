@@ -167,16 +167,6 @@ check_for_new_versions() {
   echo "Checking if any new versions of software exist"
   needs_update=false
 
-  # check stack version
-  existing_stack_version=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/graphenesnakeos-stack/revision" - || true)
-  if [ "$existing_stack_version" == "$STACK_VERSION" ]; then
-    echo "Stack version ($existing_stack_version) is up to date"
-  else
-    echo "Last successful build (if there was one) is not with current stack version ${STACK_VERSION}"
-    needs_update=true
-    BUILD_REASON="'Stack version $existing_stack_version != $STACK_VERSION'"
-  fi
-
   # check aosp
   existing_aosp_build=$(aws s3 cp "s3://${AWS_RELEASE_BUCKET}/${DEVICE}-vendor" - || true)
   if [ "$existing_aosp_build" == "$AOSP_BUILD" ]; then
