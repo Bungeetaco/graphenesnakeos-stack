@@ -114,7 +114,7 @@ BUILD_DIR="$HOME/rattlesnake-os"
 KEYS_DIR="${BUILD_DIR}/keys"
 CERTIFICATE_SUBJECT='/CN=RattlesnakeOS'
 OFFICIAL_FDROID_KEY="43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
-MARLIN_KERNEL_SOURCE_DIR="${HOME}/kernel/google/marlin"
+KERNEL_SOURCE_DIR="${HOME}/kernel/google/${DEVICE_FAMILY}"
 BUILD_REASON=""
 
 # urls
@@ -124,7 +124,7 @@ CHROME_URL_LATEST="https://omahaproxy.appspot.com/all.json"
 STACK_URL_LATEST="https://api.github.com/repos/dan-v/rattlesnakeos-stack/releases/latest"
 FDROID_CLIENT_URL_LATEST="https://gitlab.com/api/v4/projects/36189/repository/tags"
 FDROID_PRIV_EXT_URL_LATEST="https://gitlab.com/api/v4/projects/1481578/repository/tags"
-KERNEL_SOURCE_URL="https://github.com/Bungeetaco/Kirisakura_Bluecross"
+KERNEL_SOURCE_URL="https://github.com/GrapheneOS/kernel_google_${DEVICE_FAMILY}"
 AOSP_URL_BUILD="https://developers.google.com/android/images"
 AOSP_URL_BRANCH="https://source.android.com/setup/start/build-numbers"
 
@@ -149,7 +149,7 @@ get_latest_versions() {
     STACK_UPDATE_MESSAGE="WARNING: you should upgrade to the latest version: ${LATEST_STACK_VERSION}"
   fi
 
-  # check for latest stable chromium version
+   check for latest stable chromium version
   LATEST_CHROMIUM=$(curl --fail -s "$CHROME_URL_LATEST" | jq -r '.[] | select(.os == "android") | .versions[] | select(.channel == "'$CHROME_CHANNEL'") | .current_version')
   if [ -z "$LATEST_CHROMIUM" ]; then
     aws_notify_simple "ERROR: Unable to get latest Chromium version details. Stopping build."
@@ -293,10 +293,8 @@ full_run() {
   setup_vendor
   build_fdroid
   apply_patches
-  # only marlin and sailfish need kernel rebuilt so that verity_key is included
-  if [ "${DEVICE}" == "marlin" ] || [ "${DEVICE}" == "sailfish" ]; then
-    rebuild_marlin_kernel
-  fi
+  # Rebuild kernel using GrapheneOS build script
+  rebuild_kernel
   add_chromium
   build_aosp
   release "${DEVICE}"
@@ -939,31 +937,25 @@ patch_launcher() {
   sed -i.original "s/boolean createEmptyRowOnFirstScreen;/boolean createEmptyRowOnFirstScreen = false;/" "${BUILD_DIR}/packages/apps/Launcher3/src/com/android/launcher3/provider/ImportDataTask.java"
 }
 
-rebuild_marlin_kernel() {
+rebuild_kernel() {
   log_header ${FUNCNAME}
 
   # checkout kernel source on proper commit
-  mkdir -p "${MARLIN_KERNEL_SOURCE_DIR}"
-  retry git clone "${KERNEL_SOURCE_URL}" "${MARLIN_KERNEL_SOURCE_DIR}"
+  mkdir -p "${KERNEL_SOURCE_DIR}"
+  cd "${KERNEL_SOURCE_DIR}"
+  git submodule sync
+  git submodule update --init
   # TODO: make this a bit more robust
-  kernel_commit_id=$(lz4cat "${BUILD_DIR}/device/google/marlin-kernel/Image.lz4-dtb" | grep -a 'Linux version' | cut -d ' ' -f3 | cut -d'-' -f2 | sed 's/^g//g')
-  cd "${MARLIN_KERNEL_SOURCE_DIR}"
+  kernel_commit_id=$(lz4cat "${BUILD_DIR}/device/google/${DEVICE_FAMILY}-kernel/Image.lz4-dtb" | grep -a 'Linux version' | cut -d ' ' -f3 | cut -d'-' -f2 | sed 's/^g//g')
+ 
   log "Checking out kernel commit ${kernel_commit_id}"
   git checkout ${kernel_commit_id}
-
   # run in another shell to avoid it mucking with environment variables for normal AOSP build
   (
       set -e;
-      export PATH="${BUILD_DIR}/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin:${PATH}";
-      export PATH="${BUILD_DIR}/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin:${PATH}";
-      export PATH="${BUILD_DIR}/prebuilts/misc/linux-x86/lz4:${PATH}";
-      export PATH="${BUILD_DIR}/prebuilts/misc/linux-x86/dtc:${PATH}";
-      export PATH="${BUILD_DIR}/prebuilts/misc/linux-x86/libufdt:${PATH}";
-      ln --verbose --symbolic ${KEYS_DIR}/${DEVICE}/verity_user.der.x509 ${MARLIN_KERNEL_SOURCE_DIR}/verity_user.der.x509;
-      cd ${MARLIN_KERNEL_SOURCE_DIR};
-      make O=out ARCH=arm64 marlin_defconfig;
-      make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
-      cp -f out/arch/arm64/boot/Image.lz4-dtb ${BUILD_DIR}/device/google/marlin-kernel/;
+      cd ${KERNEL_SOURCE_DIR};
+      ln --verbose --symbolic ${KEYS_DIR}/${DEVICE}/verity_user.der.x509 ${KERNEL_SOURCE_DIR}/verity_user.der.x509;
+      ./build.sh ${DEVICE}
       rm -rf ${BUILD_DIR}/out/build_*;
   )
 }
