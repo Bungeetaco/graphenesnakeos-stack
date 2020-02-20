@@ -496,7 +496,7 @@ aosp_repo_init() {
   repo init -u "$MANIFEST_URL" -b refs/tags/$LATEST_TAG || true
   gpg --recv-keys 65EEFE022108E2B708CBFCF7F9E712E59AF5F22A
   gpg --recv-keys 4340D13570EF945E83810964E8AD3F819AB10E78
-  cd .repo/manifests
+  cd ${BUILD_DIR}/.repo/manifests
   git verify-tag --raw $(git describe)
   cd ../..
 }
