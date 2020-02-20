@@ -528,7 +528,6 @@ aosp_repo_modifications() {
       <% end %>
       print "  <project path=\"packages/apps/F-Droid\" name=\"platform_external_fdroid\" remote=\"ros\" />";
       print "  <project path=\"packages/apps/F-DroidPrivilegedExtension\" name=\"privileged-extension\" remote=\"fdroid\" revision=\"refs/tags/" FDROID_PRIV_EXT_VERSION "\" />";
-      print "  <project path=\"vendor/android-prepare-vendor\" name=\"android-prepare-vendor\" remote=\"ros\" />"}' .repo/manifest.xml
 
     # remove things from manifest
     sed -i '/packages\/apps\/Browser2/d' .repo/manifest.xml
