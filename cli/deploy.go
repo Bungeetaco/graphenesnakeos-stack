@@ -15,7 +15,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const defaultInstanceRegions = "us-west-2,us-west-1,us-east-2"
+const defaultInstanceRegions = "us-west-2,us-west-1,us-east-2,us-east-1,ca-central-1"
 const minimumChromiumVersion = 80
 
 var name, region, email, device, sshKey, maxPrice, skipPrice, schedule string
